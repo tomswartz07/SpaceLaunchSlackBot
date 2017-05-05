@@ -15,45 +15,91 @@ SLACK_WEBHOOK = "<WEBHOOK URL HERE>"
 API_BASE = "https://launchlibrary.net/1.2/"
 NEXT_LAUNCH = API_BASE + "launch/next/1"
 
+"""
+Parse out the data and create a JSON payload for Slack
+"""
 def generatepayload():
-    """
-    Parse out the data and create a JSON payload for Slack
-    """
-    global PAYLOAD
     r = requests.get(NEXT_LAUNCH)
-    if r.status_code == requests.codes.ok:
-        data = json.loads(r.text)
 
-        agency = data["launches"][0]["rocket"]["agencies"][0]["name"]
-        agency_url = data["launches"][0]["rocket"]["agencies"][0]["infoURL"]
-        launch_name = data["launches"][0]["name"]
-        launch_pad = data["launches"][0]["location"]["name"]
-        launch_time = data["launches"][0]["net"]
-        launch_timestamp = str(data["launches"][0]["netstamp"])
-        mission_description = data["launches"][0]["missions"][0]["description"]
-        mission_type = data["launches"][0]["missions"][0]["typeName"]
-        rocket_image = data["launches"][0]["rocket"]["imageURL"]
-        videos = data["launches"][0]["vidURLs"]
-        launch_window = str(datetime.timedelta(
-            seconds=(data["launches"][0]["westamp"] - data["launches"][0]["wsstamp"])
-        ))
-        try:
-            video = "<" + videos[0] + "|Video Stream>"
-        except Exception:
-            video = "No Video Stream Available"
-        PAYLOAD = "{\"attachments\":[{\"fallback\":\"" + agency + " rocket launch happening soon\",\"color\":\"good\",\"pretext\":\"" + agency + " launch scheduled for " + launch_time + "\",\"author_name\":\"" + agency + "\",\"author_link\":\"" + agency_url + "\",\"author_icon\":\"https://cdn4.iconfinder.com/data/icons/whsr-january-flaticon-set/512/rocket.png\",\"title\":\"" + launch_name + "\",\"title_link\":\"" + video + "\",\"text\":\"" + mission_description + "\",\"image_url\":\"" + rocket_image + "\",\"thumb_url\":\"\"},{\"fallback\":\"Information\",\"title\":\"Launch Information\",\"fields\":[{\"title\":\"Agency\",\"value\":\"" + agency + "\",\"short\":true},{\"title\":\"Launch Location\",\"value\":\"" + launch_pad + "\",\"short\":true},{\"title\":\"Mission Type\",\"value\":\"" + mission_type + "\",\"short\":true},{\"title\":\"Launch Window\",\"value\":\"" + launch_window + "\",\"short\":true},{\"title\":\"Live Stream Link\",\"value\":\"" + video + "\"}],\"footer\":\"Expected Launch Time\",\"footer_icon\":\"\",\"ts\":" + launch_timestamp + "}]}"
-        # If you wish, you can test the payload formatting at:
-        # https://api.slack.com/docs/messages/builder
-        # just print(PAYLOAD) and then paste it there
-        print(PAYLOAD)
-        return PAYLOAD
+    # return None if the request was unsuccessful
+    if r.status_code != requests.codes.ok:
+        return None
 
-def postdata(PAYLOAD):
+    # get json output
+    data = r.json()
+
+    # extract some heavily used objects
+    launch_data = data["launches"][0]
+    agency = launch_data["rocket"]["agencies"][0]
+
+    # check if there is a video stream available
+    video = "No Video Stream Available"
+    if len(launch_data["vidURLs"]) > 0:
+        video = "<" + launch_data["vidURLs"][0] + "|Video Stream>"
+
+    # bare bones payload
+    payload = {"attachments": []}
+
+    # generate the rocket info attachment
+    payload["attachments"].append({
+        "fallback": agency["name"] + " rocket launch happening soon",
+        "color": "good",
+        "pretext": agency["name"] + " launch scheduled for " + launch_data["net"],
+        "author_name": agency["name"],
+        "author_link": agency["infoURL"],
+        "author_icon": "https://cdn4.iconfinder.com/data/icons/whsr-january-flaticon-set/512/rocket.png",
+        "title": launch_data["name"],
+        "title_link": video,
+        "text": launch_data["missions"][0]["description"],
+        "image_url": launch_data["rocket"]["imageURL"]
+    })
+
+    # generate the launch info attachment
+    payload["attachments"].append({
+        "fallback": "Information",
+        "title": "Launch Information",
+        "fields": [
+            {
+                "title": "Agency",
+                "value": agency["name"],
+                "short": True
+            },
+            {
+                "title": "Launch Location",
+                "value": launch_data["location"]["name"],
+                "short": True
+            },
+            {
+                "title": "Mission Type",
+                "value": launch_data["missions"][0]["typeName"],
+                "short": True
+            },
+            {
+                "title": "Launch Window",
+                "value": str(datetime.timedelta(seconds=(launch_data["westamp"] - launch_data["wsstamp"]))),
+                "short": True
+            },
+            {
+                "title": "Live Stream Link",
+                "value": video
+            }
+        ],
+        "footer": "Expected Launch Time",
+        "footer_icon": "",
+        "ts": launch_data["netstamp"]
+    })
+
+    return json.dumps(payload)
+
+"""
+Send json message payload to Slack webhook
+"""
+def postdata(message_payload):
     requests.post(
         SLACK_WEBHOOK,
-        data=PAYLOAD,
+        data=message_payload,
         headers={"Content-Type": "application/json"}
     )
 
-generatepayload()
-postdata(PAYLOAD)
+message_payload = generatepayload()
+postdata(message_payload)
