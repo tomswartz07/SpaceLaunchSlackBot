@@ -35,3 +35,8 @@ Copy the Webhook URL or have the Admin send that URL to you, you'll need it for 
 
 ## Running
 The bot will run and post the details of the next rocket launch, as determined via info from [LaunchLibrary](http://launchlibrary.net/)
+
+## Contributing
+
+Check out the Issues page for a list of potential tasks and features that are on the roadmap to be added.
+Once you select an issue or feature that you would like to work on, please assign yourself that issue.
