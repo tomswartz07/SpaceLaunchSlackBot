@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-'''
+"""
 This script will query for upcoming rocket launches and post results to Slack
-'''
+"""
 
 import json
 import datetime
@@ -10,11 +10,10 @@ import requests
 
 # Set the webhook_url to the one provided by Slack when you create
 # the webhook at https://my.slack.com/services/new/incoming-webhook/
-SLACK_WEBHOOK = '<WEBHOOK URL HERE>'
+SLACK_WEBHOOK = "<WEBHOOK URL HERE>"
 
-
-API_BASE = 'https://launchlibrary.net/1.2/'
-NEXT_LAUNCH = API_BASE+"launch/next/1"
+API_BASE = "https://launchlibrary.net/1.2/"
+NEXT_LAUNCH = API_BASE + "launch/next/1"
 
 def generatepayload():
     """
@@ -35,8 +34,9 @@ def generatepayload():
         mission_type = data["launches"][0]["missions"][0]["typeName"]
         rocket_image = data["launches"][0]["rocket"]["imageURL"]
         videos = data["launches"][0]["vidURLs"]
-        launch_window = str(datetime.timedelta(seconds=(data["launches"][0]\
-                ["westamp"] - data["launches"][0]["wsstamp"])))
+        launch_window = str(datetime.timedelta(
+            seconds=(data["launches"][0]["westamp"] - data["launches"][0]["wsstamp"])
+        ))
         try:
             video = "<" + videos[0] + "|Video Stream>"
         except Exception:
@@ -50,9 +50,10 @@ def generatepayload():
 
 def postdata(PAYLOAD):
     requests.post(
-        SLACK_WEBHOOK, data=PAYLOAD,
-        headers={'Content-Type': 'application/json'}
-        )
+        SLACK_WEBHOOK,
+        data=PAYLOAD,
+        headers={"Content-Type": "application/json"}
+    )
 
 generatepayload()
 postdata(PAYLOAD)
