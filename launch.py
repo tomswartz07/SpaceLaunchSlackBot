@@ -4,6 +4,7 @@
 This script will query for upcoming rocket launches and post results to Slack
 """
 
+import sys
 import json
 import datetime
 import requests
@@ -13,93 +14,115 @@ import requests
 SLACK_WEBHOOK = "<WEBHOOK URL HERE>"
 
 API_BASE = "https://launchlibrary.net/1.3/"
-NEXT_LAUNCH = API_BASE + "launch/next/1"
+# Grab next 5 launches
+# We'd be living in the future if there are >5 in a day
+NEXT_LAUNCH = API_BASE + "launch/next/5"
 
-"""
-Parse out the data and create a JSON payload for Slack
-"""
 def generatepayload():
+    """
+    Parse out the data and create a JSON payload for Slack
+    """
     r = requests.get(NEXT_LAUNCH)
 
-    # return None if the request was unsuccessful
+    # Return None if the request was unsuccessful
     if r.status_code != requests.codes.ok:
         return None
 
-    # get json output
+    # Get JSON output
     data = r.json()
 
-    # extract some heavily used objects
-    launch_data = data["launches"][0]
-    agency = launch_data["rocket"]["agencies"][0]
+    launch_data = data["launches"]
 
-    # check if there is a video stream available
-    video = "No Video Stream Available"
-    if len(launch_data["vidURLs"]) > 0:
-        video = "<" + launch_data["vidURLs"][0] + "|Video Stream>"
+    # Count the number of launches today
+    launchCount = len(launch_data)
+    currentUTC = datetime.datetime.utcnow()
+    for launch in launch_data:
+        launch_time = launch["netstamp"]
+        if datetime.datetime.fromtimestamp(launch_time) <= currentUTC + datetime.timedelta(hours=24):
+            launchCount -= 1
+    if launchCount == 0:
+        sys.exit()
+    datetime.timedelta(hours=0)
 
-    # bare bones payload
-    payload = {"attachments": []}
+    # Create payload skeleton
+    if launchCount > 1:
+        payload = {"text": str(launchCount) + " launches scheduled in next 24h", "attachments": []}
+    else:
+        payload = {"text": str(launchCount) + " launch scheduled in next 24h", "attachments": []}
 
-    # generate the rocket info attachment
-    payload["attachments"].append({
-        "fallback": agency["name"] + " rocket launch happening soon",
-        "color": "good",
-        "pretext": agency["name"] + " launch scheduled for " + launch_data["net"],
-        "author_name": agency["name"],
-        "author_link": agency["infoURL"],
-        "author_icon": "https://cdn4.iconfinder.com/data/icons/whsr-january-flaticon-set/512/rocket.png",
-        "title": launch_data["name"],
-        "title_link": video,
-        "text": launch_data["missions"][0]["description"],
-        "image_url": launch_data["rocket"]["imageURL"]
-    })
+    counter = 0
+    for launch_data in data["launches"]:
+        if counter < launchCount:
+            # Extract primary launch agency
+            agency = launch_data["rocket"]["agencies"][0]
 
-    # generate the launch info attachment
-    payload["attachments"].append({
-        "fallback": "Information",
-        "title": "Launch Information",
-        "fields": [
-            {
-                "title": "Agency",
-                "value": agency["name"],
-                "short": True
-            },
-            {
-                "title": "Launch Location",
-                "value": launch_data["location"]["name"],
-                "short": True
-            },
-            {
-                "title": "Mission Type",
-                "value": launch_data["missions"][0]["typeName"],
-                "short": True
-            },
-            {
-                "title": "Launch Window",
-                "value": str(datetime.timedelta(seconds=(launch_data["westamp"] - launch_data["wsstamp"]))),
-                "short": True
-            },
-            {
-                "title": "Live Stream Link",
-                "value": video
-            }
-        ],
-        "footer": "Expected Launch Time",
-        "footer_icon": "",
-        "ts": launch_data["netstamp"]
-    })
+            # Check if there is mission info available
+            mission = "No Mission Info Available"
+            for mission in launch_data["missions"]:
+                mission = launch_data["missions"][0]["description"]
+                mission_type = launch_data["missions"][0]["typeName"]
+
+            image = ""
+            if "placeholder" not in launch_data["rocket"]["imageURL"]:
+                image = launch_data["rocket"]["imageURL"]
+
+            # generate the launch info attachment
+            payload["attachments"].append({
+                "fallback": "Information",
+                "color": "good",
+                "author_name": agency["name"],
+                "author_link": agency["infoURL"],
+                "author_icon": "https://cdn4.iconfinder.com/data/icons/whsr-january-flaticon-set/512/rocket.png",
+                "title": launch_data["name"],
+                "text": mission,
+                "image_url": image,
+                "fields": [
+                    {
+                        "title": "Launch Location",
+                        "value": launch_data["location"]["name"],
+                        "short": True
+                    },
+                    {
+                        "title": "Launch Window",
+                        "value": str(datetime.timedelta(seconds=(launch_data["westamp"] - launch_data["wsstamp"]))),
+                        "short": True
+                    },
+                    {
+                        "title": "Mission Type",
+                        "value": mission_type,
+                        "short": True
+                    }
+                ],
+                "footer": "Expected Launch Time",
+                "footer_icon": "",
+                "ts": launch_time,
+                "actions": []
+            })
+
+            # Attach video buttons
+            # check if there is a video stream available
+            for item in launch_data["vidURLs"]:
+                video = item
+                payload["attachments"][counter]["actions"].append({
+                    "type": "button",
+                    "name": "LaunchStream",
+                    "text": "Video Stream ",
+                    "style": "primary",
+                    "url": video
+                })
+            counter += 1
 
     return json.dumps(payload)
 
-"""
-Send json message payload to Slack webhook
-"""
 def postdata(message_payload):
+    """
+    Send json message payload to Slack webhook
+    """
     requests.post(
         SLACK_WEBHOOK,
         data=message_payload,
         headers={"Content-Type": "application/json"}
     )
 
-message_payload = generatepayload()
-postdata(message_payload)
+message = generatepayload()
+postdata(message)
