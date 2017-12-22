@@ -12,7 +12,7 @@ import requests
 # the webhook at https://my.slack.com/services/new/incoming-webhook/
 SLACK_WEBHOOK = "<WEBHOOK URL HERE>"
 
-API_BASE = "https://launchlibrary.net/1.2/"
+API_BASE = "https://launchlibrary.net/1.3/"
 NEXT_LAUNCH = API_BASE + "launch/next/1"
 
 """
