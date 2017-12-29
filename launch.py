@@ -66,6 +66,12 @@ def generatepayload():
             if "placeholder" not in launch_data["rocket"]["imageURL"]:
                 image = launch_data["rocket"]["imageURL"]
 
+            liftoff_ts = ""
+            footer = ""
+            if launch_data["netstamp"] is not 0:
+                footer = "Expected Launch Time"
+                liftoff_ts = launch_data["netstamp"]
+
             # generate the launch info attachment
             payload["attachments"].append({
                 "fallback": "Information",
@@ -93,9 +99,9 @@ def generatepayload():
                         "short": True
                     }
                 ],
-                "footer": "Expected Launch Time",
+                "footer": footer,
                 "footer_icon": "",
-                "ts": launch_time,
+                "ts": liftoff_ts,
                 "actions": []
             })
 
