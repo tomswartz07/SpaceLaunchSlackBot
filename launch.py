@@ -35,10 +35,10 @@ def generatepayload():
 
     # Count the number of launches today
     launchCount = len(launch_data)
-    currentUTC = datetime.datetime.utcnow()
     for launch in launch_data:
-        launch_time = launch["netstamp"]
-        if datetime.datetime.fromtimestamp(launch_time) <= currentUTC + datetime.timedelta(hours=24):
+        if datetime.datetime.utcnow() <= datetime.datetime.fromtimestamp(launch["netstamp"]) <= datetime.datetime.utcnow() + datetime.timedelta(hours=24):
+            continue
+        else:
             launchCount -= 1
     if launchCount == 0:
         sys.exit()
