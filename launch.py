@@ -13,10 +13,10 @@ import requests
 # the webhook at https://my.slack.com/services/new/incoming-webhook/
 SLACK_WEBHOOK = "<WEBHOOK URL HERE>"
 
-API_BASE = "https://launchlibrary.net/1.3/"
+API_BASE = "https://ll.thespacedevs.com/2.0.0/"
 # Grab next 5 launches
 # We'd be living in the future if there are >5 in a day
-NEXT_LAUNCH = API_BASE + "launch/next/5"
+NEXT_LAUNCH = API_BASE + "launch/upcoming/"
 
 def generatepayload():
     """
@@ -30,16 +30,16 @@ def generatepayload():
 
     # Get JSON output
     data = r.json()
-
-    launch_data = data["launches"]
+    launch_data = data["results"]
 
     # Count the number of launches today
     launchCount = len(launch_data)
     for launch in launch_data:
-        if datetime.datetime.utcnow() <= datetime.datetime.fromtimestamp(launch["netstamp"]) <= datetime.datetime.utcnow() + datetime.timedelta(hours=24):
+        if datetime.datetime.utcnow() <= \
+                datetime.datetime.strptime(launch["net"], "%Y-%m-%dT%H:%M:%SZ") <= \
+                datetime.datetime.utcnow() + datetime.timedelta(hours=24):
             continue
-        else:
-            launchCount -= 1
+        launchCount -= 1
     if launchCount == 0:
         sys.exit()
     datetime.timedelta(hours=0)
@@ -51,33 +51,37 @@ def generatepayload():
         payload = {"text": str(launchCount) + " launch scheduled in next 24h", "attachments": []}
 
     counter = 0
-    for launch_data in data["launches"]:
+    for launch_data in data["results"]:
         if counter < launchCount:
             # Extract primary launch agency
-            agency = launch_data["rocket"]["agencies"][0]
+            agency = launch_data["launch_service_provider"]
 
             # Check if there is mission info available
             mission = "No Mission Info Available"
-            for mission in launch_data["missions"]:
-                mission = launch_data["missions"][0]["description"]
-                mission_type = launch_data["missions"][0]["typeName"]
+            for mission in launch_data["mission"]:
+                mission = launch_data["mission"]["description"]
+                mission_type = launch_data["mission"]["type"]
 
             image = ""
-            if "placeholder" not in launch_data["rocket"]["imageURL"]:
-                image = launch_data["rocket"]["imageURL"]
+            image = launch_data["image"]
 
             liftoff_ts = ""
             footer = ""
-            if launch_data["netstamp"] is not 0:
+            if launch_data["net"] != 0:
                 footer = "Expected Launch Time"
-                liftoff_ts = launch_data["netstamp"]
+                liftoff_ts = (datetime.datetime.strptime(
+                    launch_data["net"], "%Y-%m-%dT%H:%M:%SZ") - \
+                            datetime.datetime(1970, 1, 1)) / datetime.timedelta(seconds=1)
 
+
+            window_start = datetime.datetime.strptime(launch_data["window_start"], "%Y-%m-%dT%H:%M:%SZ")
+            window_end = datetime.datetime.strptime(launch_data["window_end"], "%Y-%m-%dT%H:%M:%SZ")
             # generate the launch info attachment
             payload["attachments"].append({
                 "fallback": "Information",
                 "color": "good",
                 "author_name": agency["name"],
-                "author_link": agency["infoURL"],
+                "author_link": agency["url"],
                 "author_icon": "https://cdn4.iconfinder.com/data/icons/whsr-january-flaticon-set/512/rocket.png",
                 "title": launch_data["name"],
                 "text": mission,
@@ -85,12 +89,12 @@ def generatepayload():
                 "fields": [
                     {
                         "title": "Launch Location",
-                        "value": launch_data["location"]["name"],
+                        "value": launch_data["pad"]["location"]["name"],
                         "short": True
                     },
                     {
                         "title": "Launch Window",
-                        "value": str(datetime.timedelta(seconds=(launch_data["westamp"] - launch_data["wsstamp"]))),
+                        "value": str(window_end - window_start),
                         "short": True
                     },
                     {
@@ -107,15 +111,16 @@ def generatepayload():
 
             # Attach video buttons
             # check if there is a video stream available
-            for item in launch_data["vidURLs"]:
-                video = item
-                payload["attachments"][counter]["actions"].append({
-                    "type": "button",
-                    "name": "LaunchStream",
-                    "text": "Video Stream ",
-                    "style": "primary",
-                    "url": video
-                })
+            if launch_data["webcast_live"]:
+                for item in launch_data["webcast_live"]:
+                    video = item
+                    payload["attachments"][counter]["actions"].append({
+                        "type": "button",
+                        "name": "LaunchStream",
+                        "text": "Video Stream ",
+                        "style": "primary",
+                        "url": video
+                    })
             counter += 1
 
     return json.dumps(payload)
