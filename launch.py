@@ -13,10 +13,18 @@ import requests
 # the webhook at https://my.slack.com/services/new/incoming-webhook/
 SLACK_WEBHOOK = "<WEBHOOK URL HERE>"
 
-API_BASE = "https://ll.thespacedevs.com/2.0.0/"
+# Dev
+#NEXT_LAUNCH = "https://lldev.thespacedevs.com/2.1.0/"
+# Prod
+NEXT_LAUNCH = "https://llv.thespacedevs.com/2.1.0/"
 # Grab next 5 launches
 # We'd be living in the future if there are >5 in a day
-NEXT_LAUNCH = API_BASE + "launch/upcoming/"
+NEXT_LAUNCH += "launch/upcoming/?"
+
+# Omit the launches that occurred in the past 24h
+# since this script should run daily-ish
+
+NEXT_LAUNCH += "hide_recent_previous=true"
 
 def generatepayload():
     """
