@@ -14,16 +14,19 @@ import requests
 SLACK_WEBHOOK = "<WEBHOOK URL HERE>"
 
 # Dev
-#NEXT_LAUNCH = "https://lldev.thespacedevs.com/2.1.0/"
+#NEXT_LAUNCH = "https://lldev.thespacedevs.com"
 # Prod
-NEXT_LAUNCH = "https://llv.thespacedevs.com/2.1.0/"
+NEXT_LAUNCH = "http://ll.thespacedevs.com"
+
+# API Version
+NEXT_LAUNCH += "/2.1.0/"
+
 # Grab next 5 launches
 # We'd be living in the future if there are >5 in a day
 NEXT_LAUNCH += "launch/upcoming/?"
 
 # Omit the launches that occurred in the past 24h
 # since this script should run daily-ish
-
 NEXT_LAUNCH += "hide_recent_previous=true"
 
 def generatepayload():
