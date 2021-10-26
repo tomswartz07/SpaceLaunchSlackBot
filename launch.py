@@ -4,6 +4,7 @@
 This script will query for upcoming rocket launches and post results to Slack
 """
 
+import os
 import sys
 import json
 import datetime
@@ -11,7 +12,8 @@ import requests
 
 # Set the webhook_url to the one provided by Slack when you create
 # the webhook at https://my.slack.com/services/new/incoming-webhook/
-SLACK_WEBHOOK = "<WEBHOOK URL HERE>"
+print(f'Running now {datetime.datetime.now()}')
+SLACK_WEBHOOK = os.environ.get('SLACK_WEBHOOK')
 
 # Dev
 #NEXT_LAUNCH = "https://lldev.thespacedevs.com"
