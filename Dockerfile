@@ -5,11 +5,10 @@ LABEL description="Docker container to run a Slack bot which posts daily \
 launches obtained from LaunchLibrary."
 
 
+COPY crontab .
+RUN crontab crontab
 COPY launch.py .
 COPY requirements.txt .
-COPY crontab .
 RUN pip install --no-cache-dir -r requirements.txt
-
-RUN crontab crontab
 
 CMD [ "crond", "-f" ]
