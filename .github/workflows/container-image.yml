@@ -42,4 +42,4 @@ jobs:
             tomswartz07/slack-launch:latest
             tomswartz07/slack-launch:${{github.ref_name}}
             ghcr.io/tomswartz07/slack-launch:latest
-            ghcr.io/tomswartz07/slack-launch:${{githb.ref_name}}
+            ghcr.io/tomswartz07/slack-launch:${{github.ref_name}}
