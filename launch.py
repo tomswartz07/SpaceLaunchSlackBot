@@ -16,7 +16,7 @@ print(f'Running now {datetime.datetime.now()}')
 SLACK_WEBHOOK = os.environ.get('SLACK_WEBHOOK')
 
 # Dev
-#NEXT_LAUNCH = "https://lldev.thespacedevs.com"
+# NEXT_LAUNCH = "https://lldev.thespacedevs.com"
 # Prod
 NEXT_LAUNCH = "http://ll.thespacedevs.com"
 
@@ -83,12 +83,13 @@ def generatepayload():
             if launch_data["net"] != 0:
                 footer = "Expected Launch Time"
                 liftoff_ts = (datetime.datetime.strptime(
-                    launch_data["net"], "%Y-%m-%dT%H:%M:%SZ") - \
+                    launch_data["net"], "%Y-%m-%dT%H:%M:%SZ") -
                             datetime.datetime(1970, 1, 1)) / datetime.timedelta(seconds=1)
 
-
-            window_start = datetime.datetime.strptime(launch_data["window_start"], "%Y-%m-%dT%H:%M:%SZ")
-            window_end = datetime.datetime.strptime(launch_data["window_end"], "%Y-%m-%dT%H:%M:%SZ")
+            window_start = datetime.datetime.strptime(
+                    launch_data["window_start"], "%Y-%m-%dT%H:%M:%SZ")
+            window_end = datetime.datetime.strptime(
+                    launch_data["window_end"], "%Y-%m-%dT%H:%M:%SZ")
             # generate the launch info attachment
             payload["attachments"].append({
                 "fallback": "Information",
@@ -138,6 +139,7 @@ def generatepayload():
 
     return json.dumps(payload)
 
+
 def postdata(message_payload):
     """
     Send json message payload to Slack webhook
@@ -147,6 +149,7 @@ def postdata(message_payload):
         data=message_payload,
         headers={"Content-Type": "application/json"}
     )
+
 
 message = generatepayload()
 postdata(message)
