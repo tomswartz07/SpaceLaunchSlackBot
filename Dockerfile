@@ -9,6 +9,9 @@ COPY crontab .
 RUN crontab crontab
 COPY launch.py .
 COPY requirements.txt .
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN pip install --no-cache-dir -r requirements.txt
 
 CMD [ "crond", "-f" ]
