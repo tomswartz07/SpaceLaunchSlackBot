@@ -9,6 +9,7 @@ import sys
 import json
 import datetime
 import requests
+from requests import codes
 
 # Set the webhook_url to the one provided by Slack when you create
 # the webhook at https://my.slack.com/services/new/incoming-webhook/
@@ -23,22 +24,24 @@ NEXT_LAUNCH = "http://ll.thespacedevs.com"
 # API Version
 NEXT_LAUNCH += "/2.2.0/"
 
-# Grab next 5 launches
+# Grab next launches iterate over a single page of API results
 # We'd be living in the future if there are >5 in a day
+# (N.B. There were 5 launches on 3 Aug 2022)
 NEXT_LAUNCH += "launch/upcoming/?"
 
 # Omit the launches that occurred in the past 24h
 # since this script should run daily-ish
 NEXT_LAUNCH += "hide_recent_previous=true"
 
-def generatepayload():
+
+def getLaunches():
     """
-    Parse out the data and create a JSON payload for Slack
+    Get info from the Launch Library API
     """
     r = requests.get(NEXT_LAUNCH)
 
     # Return None if the request was unsuccessful
-    if r.status_code != requests.codes.ok:
+    if r.status_code != codes.ok:  # pylint: disable=E1101
         return None
 
     # Get JSON output
@@ -54,7 +57,17 @@ def generatepayload():
             continue
         launchCount -= 1
     if launchCount == 0:
+        print("No launches in the next 24 hours")
         sys.exit()
+    return launch_data, launchCount
+
+
+def generatepayload(launches, count):
+    """
+    Parse out the data and create a JSON payload for Slack
+    """
+    launch_data = launches
+    launchCount = count
     datetime.timedelta(hours=0)
 
     # Create payload skeleton
@@ -64,7 +77,7 @@ def generatepayload():
         payload = {"text": str(launchCount) + " launch scheduled in next 24h", "attachments": []}
 
     counter = 0
-    for launch_data in data["results"]:
+    for launch_data in launches:
         if counter < launchCount:
             # Extract primary launch agency
             agency = launch_data["launch_service_provider"]
@@ -90,6 +103,10 @@ def generatepayload():
                     launch_data["window_start"], "%Y-%m-%dT%H:%M:%SZ")
             window_end = datetime.datetime.strptime(
                     launch_data["window_end"], "%Y-%m-%dT%H:%M:%SZ")
+            if str(window_end - window_start) == "0:00:00":
+                launch_window = "Instantaneous"
+            else:
+                launch_window = str(window_end - window_start)
             # generate the launch info attachment
             payload["attachments"].append({
                 "fallback": "Information",
@@ -108,7 +125,7 @@ def generatepayload():
                     },
                     {
                         "title": "Launch Window",
-                        "value": str(window_end - window_start),
+                        "value": launch_window,
                         "short": True
                     },
                     {
@@ -152,5 +169,15 @@ def postdata(message_payload):
     )
 
 
-message = generatepayload()
-postdata(message)
+def run():
+    """
+    Do it to it
+    Get the launches and post the Slack message
+    """
+    data, count = getLaunches()
+    message = generatepayload(data, count)
+    postdata(message)
+
+
+if __name__ == "__main__":
+    run()
