@@ -21,6 +21,8 @@ This repository contains the code for a script that will post information regard
 3. Run that shit. Schedule a cron job or put it in Kubernetes or something. I don't know.
 
 ## Recommended Settings
+Create a Custom Webhook integration for your Slack org: [Link](https://slack.com/apps/A0F7XDUAZ-incoming-webhooks)
+
 When creating the custom webhook for the Slack channel, there are a few options to customize.
 
 It's also possible that you don't have access to add an incoming webhook to your team because of the permissions model. In that case, you would need to know what to send to the admin to get it set up. This is that stuff.
