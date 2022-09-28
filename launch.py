@@ -21,7 +21,7 @@ SLACK_WEBHOOK = os.environ.get('SLACK_WEBHOOK')
 NEXT_LAUNCH = "http://ll.thespacedevs.com"
 
 # API Version
-NEXT_LAUNCH += "/2.1.0/"
+NEXT_LAUNCH += "/2.2.0/"
 
 # Grab next 5 launches
 # We'd be living in the future if there are >5 in a day
@@ -147,6 +147,7 @@ def postdata(message_payload):
     requests.post(
         SLACK_WEBHOOK,
         data=message_payload,
+        timeout=60,
         headers={"Content-Type": "application/json"}
     )
 
