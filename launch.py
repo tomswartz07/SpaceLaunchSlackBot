@@ -9,6 +9,7 @@ import sys
 import json
 import datetime
 import requests
+from dateutil import parser
 from requests import codes
 
 # Set the webhook_url to the one provided by Slack when you create
@@ -38,7 +39,7 @@ def getLaunches():
     """
     Get info from the Launch Library API
     """
-    r = requests.get(NEXT_LAUNCH)
+    r = requests.get(NEXT_LAUNCH, timeout=60)
 
     # Return None if the request was unsuccessful
     if r.status_code != codes.ok:  # pylint: disable=E1101
@@ -51,9 +52,9 @@ def getLaunches():
     # Count the number of launches today
     launchCount = len(launch_data)
     for launch in launch_data:
-        if datetime.datetime.utcnow() <= \
-                datetime.datetime.strptime(launch["net"], "%Y-%m-%dT%H:%M:%SZ") <= \
-                datetime.datetime.utcnow() + datetime.timedelta(hours=24):
+        if datetime.datetime.now(datetime.UTC) <= \
+                parser.parse(launch["net"]) <= \
+                datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=24):
             continue
         launchCount -= 1
     if launchCount == 0:
@@ -143,15 +144,19 @@ def generatepayload(launches, count):
             # Attach video buttons
             # check if there is a video stream available
             if launch_data["webcast_live"]:
-                for item in launch_data["webcast_live"]:
-                    video = item
-                    payload["attachments"][counter]["actions"].append({
-                        "type": "button",
-                        "name": "LaunchStream",
-                        "text": "Video Stream ",
-                        "style": "primary",
-                        "url": video
-                    })
+                try:
+                    for item in launch_data["webcast_live"]:
+                        video = item
+                        payload["attachments"][counter]["actions"].append({
+                            "type": "button",
+                            "name": "LaunchStream",
+                            "text": "Video Stream ",
+                            "style": "primary",
+                            "url": video
+                        })
+                except TypeError as e:
+                    print(f"Issue with webcast: {e}")
+                    continue
             counter += 1
 
     return json.dumps(payload)
